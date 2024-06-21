@@ -1,32 +1,58 @@
 import express from "express";
+import JSONdb from "simple-json-db";
 import cors from "cors";
 
 const server = express();
+const todoDB = new JSONdb("./data/todos.json", {
+  asyncWrite: true
+});
+
+console.log(todoDB);
 
 server.use(cors());
-
-const todoData = [
-    {
-      id: "82cd49ca-81a9-47d9-998e-83e5276e02e3",
-      title: "Todo 1 Titel"
-    },
-    {
-      id: "a92618ef-9df5-4649-9fb9-3a0389c5e411",
-      title: "Todo 2 Titel"
-    },
-    {
-      id: "91be7314-9013-437d-ae54-c51e7c00e4a1",
-      title: "Todo 3 Titel"
-    },
-    {
-      id: "5ce640cc-ee05-4da0-9694-e753af7d8029",
-      title: "Todo 4 Titel"
-    }
-  ];
-
+server.use(express.json());
 server.disable("x-powered-by");
 server.get("/todos", function(request, response) {
-    response.send(todoData);
+    response.send(todoDB.JSON());
+});
+server.post("/todos", function(request, response) {
+  const requestToDoData = request.body;
+  const allTodos = todoDB.JSON();
+
+  allTodos.push(requestToDoData);
+  todoDB.JSON(allTodos);
+  todoDB.sync();
+
+  response.send(todoDB.JSON());
+});
+server.delete("/todos/:id", function(request, response) {
+  const todoId = request.params.id;
+  const allTodos = todoDB.JSON();
+
+  const matchedTodo = allTodos.find(todo => todo.id === todoId);
+
+  if (matchedTodo) {
+    allTodos.splice(allTodos.indexOf(matchedTodo), 1);
+    todoDB.JSON(allTodos);
+    todoDB.sync();
+
+    response.send(todoDB.JSON());
+  } else {
+    response.status(404).send("ToDo not found!");
+  }
+});
+
+server.get("/todos/:id", function(request, response) {
+  const todoId = request.params.id;
+  const allTodos = todoDB.JSON();
+
+  const matchedTodo = allTodos.find(todo => todo.id === todoId);
+
+  if (matchedTodo) {
+    response.send(matchedTodo);
+  } else {
+    response.status(404).send("ToDo not found!");
+  }
 });
 
 server.listen(8080, function(){
